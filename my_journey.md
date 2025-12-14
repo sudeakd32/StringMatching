@@ -1,187 +1,146 @@
-Bonus Homework Report
-String Matching Algorithms
+# Bonus Homework Report
+## String Matching Algorithms
 
-Zeki Furkan Yıldız (21050111019)
-Sudenur Akdogan (2350111017)
+**Zeki Furkan Yıldız (21050111019)**  
+**Sudenur Akdogan (23050111017)**
 
-Introduction
+---
 
-In this homework, we worked on string matching algorithms. The main goal was to implement the Boyer–Moore algorithm and create a custom algorithm called GoCrazy. We also wrote a Pre-Analysis class to choose the best algorithm automatically.
+## Introduction
+
+In this homework, we worked on string matching algorithms. The main goal was to implement the **Boyer–Moore** algorithm and create a custom algorithm called **GoCrazy**. We also wrote a **Pre-Analysis** class to choose the best algorithm automatically.
 
 During this process, we realized that theoretical speed is not always the same as real-world speed, especially due to Java’s overhead costs and JVM optimizations.
 
-Boyer–Moore Implementation
+---
 
-We implemented the Boyer–Moore algorithm in the Analysis.java file, focusing specifically on the Bad Character Heuristic.
+## Boyer–Moore Implementation
 
-For the implementation, we used an integer array of size 256 for ASCII characters.
+We implemented the **Boyer–Moore** algorithm in the `Analysis.java` file, focusing specifically on the **Bad Character Heuristic**.
 
-Optimization: Threshold Check
+For the implementation, we used an integer array of size `256` for ASCII characters.
 
-We observed that building the badChar lookup table itself has a cost.
-If the pattern length is less than 20 characters, the Naive algorithm is often faster in practice. Therefore, we added a threshold check to fall back to Naive for short patterns.
+### Optimization: Threshold Check
 
-Resources Used
+We observed that building the `badChar` lookup table itself has a cost.  
+If the pattern length is **less than 20 characters**, the **Naive** algorithm is often faster in practice. Therefore, we added a threshold check to fall back to Naive for short patterns.
 
-To understand the Boyer–Moore logic and the Bad Character rule, we used:
+### Resources Used
 
-https://www.tutorialspoint.com/data_structures_algorithms/boyer_moore_algorithm.htm
+- https://www.tutorialspoint.com/data_structures_algorithms/boyer_moore_algorithm.htm
+- https://www.geeksforgeeks.org/dsa/boyer-moore-algorithm-for-pattern-searching/
+- https://github.com/likejazz/boyer-moore-string-search
 
-https://www.geeksforgeeks.org/dsa/boyer-moore-algorithm-for-pattern-searching/
+---
 
-We also reviewed this GitHub repository for implementation structure ideas:
+## GoCrazy Algorithm
 
-https://github.com/likejazz/boyer-moore-string-search
+For the creative part, we wanted an algorithm faster than standard Boyer–Moore in real-world cases. We designed **GoCrazy**, a hybrid approach inspired by:
 
-GoCrazy Algorithm
+- **Sunday’s Algorithm**
+- **FJS (Fast–Jesus–Sunday)**
 
-For the creative part, we wanted an algorithm faster than standard Boyer–Moore in real-world cases. We designed GoCrazy, a hybrid approach inspired by:
+### Core Idea
 
-Sunday’s Algorithm
+When a mismatch occurs, instead of examining the mismatched character inside the window, Sunday’s algorithm checks the character **immediately after the window**. This often allows larger jumps.
 
-FJS (Fast–Jesus–Sunday)
+To avoid worst-case behavior on repetitive patterns, we also integrated **KMP-style prefix logic** for safety.
 
-Core Idea
+### Resources Used
 
-When a mismatch occurs, instead of examining the mismatched character inside the window, Sunday’s algorithm checks the character immediately after the window. This often allows larger jumps.
+- https://github.com/johannburkard/StringSearch
+- https://github.com/CGJennings/fjs-string-matching
 
-To avoid worst-case behavior on repetitive patterns, we also integrated KMP-style prefix logic for safety.
+---
 
-Resources Used
-
-We researched hybrid approaches and adapted ideas from the following repositories:
-
-https://github.com/johannburkard/StringSearch
-
-(Sunday’s Algorithm logic)
-
-https://github.com/CGJennings/fjs-string-matching
-
-(FJS / KMP hybrid ideas)
-
-Pre-Analysis Logic
+## Pre-Analysis Logic
 
 This was the most critical and complex part of the assignment.
 
-Initially, we noticed that the Naive algorithm was winning almost all standard test cases. This led us to an important realization:
+Initially, we noticed that the **Naive algorithm** was winning almost all standard test cases. This led us to an important realization:
 
-In modern Java, simple often beats theoretically optimal for small and medium inputs.
+> In modern Java, *simple often beats theoretically optimal* for small and medium inputs.
 
-Why Does Naive Win?
+### Why Does Naive Win?
 
-Two main reasons explain this behavior:
+- **Overhead Cost**  
+  Creating lookup tables takes microseconds, which dominates short searches.
 
-Overhead Cost
-Creating lookup tables (HashMap, int[256], etc.) takes microseconds.
-For searches that finish in 1–2 microseconds, this setup cost dominates.
+- **JIT Optimization**  
+  The JVM heavily optimizes simple loops like Naive string matching.
 
-JIT Optimization
-The JVM aggressively optimizes simple loops.
-Naive string matching benefits heavily from JIT optimizations.
+---
 
-Our Strategy
+## Our Strategy
 
-Based on our findings, we implemented a layered decision system in the StudentPreAnalysis class:
+1. **Instant Edge Cases**  
+   Empty pattern or pattern longer than text → **Naive**
 
-Instant Edge Cases
+2. **Ultra-Short Patterns (`M ≤ 3`)**  
+   Analysis cost > search cost → **Naive**
 
-Empty pattern
+3. **Repetitive Patterns**  
+   Detected via `hasHighRepetition` → **KMP**
 
-Pattern longer than text
-→ Return Naive immediately.
+4. **Small Texts (`N < 128`)**  
+   Heuristic overhead too high → **Naive**
 
-Ultra-Short Patterns (M ≤ 3)
-Analysis overhead is larger than the search itself.
-→ Force Naive.
+5. **Large Texts (`N > 512`)**
+    - Small alphabet (DNA) → **KMP**
+    - Long patterns (`M > 30`) → **Boyer–Moore**
 
-Repetitive Patterns
-Using a helper method hasHighRepetition (checking the first 8 characters), we detect patterns like "AAAA".
-→ Switch to KMP to avoid worst-case O(N·M).
+6. **Sweet Spot**  
+   Everything else → **GoCrazy**
 
-Small Text Optimization (N < 128)
-Heuristic table construction cost outweighs benefits.
-→ Force Naive.
+---
 
-Large Texts (N > 512)
+## Analysis of Results
 
-Small Alphabet (DNA detection)
-Using a fast bitmask (isSmallAlphabet), we detect alphabets like {A, C, G, T}.
-→ Prefer KMP for stability.
+- **Prediction Accuracy:** 20 / 30 test cases (**66.7%**)
 
-Long Patterns (M > 30)
-→ Boyer–Moore benefits from good suffix jumps.
+- **Very Long Text**
+    - Naive: `34.98 μs`
+    - GoCrazy: `21.03 μs`
 
-The “Sweet Spot” – GoCrazy
-For standard texts and medium-length patterns, we default to GoCrazy, which showed the best benchmark results due to aggressive skipping.
+- **Repetitive Patterns**
+    - Selected **KMP** for worst-case safety
 
-Analysis of Results
+- **Pattern Longer Than Text**
+    - Execution time: `0.47 μs`
 
-Our final results show that the adaptive strategy performs significantly better than using a single static algorithm.
+---
 
-Overall Accuracy
-Correctly predicted the fastest algorithm in 20 out of 30 cases (66.7%).
+## Our Journey
 
-Very Long Text
+This homework was interesting because it showed us that Big-O notation is not everything.  
+Theoretically, Boyer-Moore is `O(N/M)`, which should be fast. But in reality, for small strings, the initialization cost makes it slower than the `O(N*M)` Naive algorithm.
 
-Naive: 34.98 μs
+We spent a lot of time debugging because we thought our Boyer-Moore code was wrong. Later we realized it was just the overhead cost. Researching different repositories (like FJS and Sunday) helped us write a much better GoCrazy algorithm.
 
-GoCrazy: 21.03 μs
-→ Strategy correctly avoided Naive.
+Thanks to this homework, we painfully learned that optimization does not lie solely in theoretical formulas, but also in knowing where and when to defeat that microsecond startup cost. Lastly, we understood that the best algorithm is not always the most complex, but the one most suitable for the current workload.
 
-Repetitive Patterns
-Detected repetition and selected KMP (9.68 μs).
-Although Naive was slightly faster in this case, KMP guaranteed safety against worst-case inputs.
+---
 
-Pattern Longer Than Text
-Instantly selected Naive, resulting in 0.47 μs.
+### AI Utilization & Methodology
 
-Our Journey
+During the development of the strategy, comparative analysis, and debugging complex overhead issues, we utilized AI assistants (specifically **Gemini**) to quickly analyze console output and evaluate performance trade-offs.
 
-This homework taught us that Big-O notation alone is not enough.
+To ensure transparency regarding our code generation and optimization process, we guided the AI using specific technical resources we found online. Below are the exact prompts we used to refine our algorithms:
 
-Theoretically, Boyer–Moore should be extremely fast. However, in practice, initialization overhead makes it slower than Naive for small inputs.
+- **For the GoCrazy Algorithm (Sunday / FJS Logic):**
 
-We initially spent a lot of time debugging, assuming our Boyer–Moore implementation was wrong. Eventually, we realized the issue was not correctness—but overhead.
+  > *"I found these resources online:  
+  > https://github.com/johannburkard/StringSearch,  
+  > https://github.com/CGJennings/fjs-string-matching.  
+  > Can you update the GoCrazy algorithm using the logic of these algorithms?  
+  > We will cite them as references. Please provide renewed, efficient Java code that looks unique and original, not generic code."*
 
-Exploring algorithms like FJS and Sunday helped us design a much better hybrid approach.
+- **For Boyer-Moore Optimization:**
 
-In the end, we learned that:
+  > *"https://www.tutorialspoint.com/data_structures_algorithms/boyer_moore_algorithm.htm,  
+  > https://www.geeksforgeeks.org/dsa/boyer-moore-algorithm-for-pattern-searching/,  
+  > https://github.com/likejazz/boyer-moore-string-search.  
+  > How can we make Boyer-Moore more efficient suitable for the instructor's requirements, influenced by these sites?  
+  > Give me original code, only change the Boyer-Moore part."*
 
-Optimization is not only about asymptotic complexity
-
-Microsecond-level costs matter
-
-The best algorithm is the one that fits the current workload, not the most complex one
-
-AI Utilization & Methodology
-
-During strategy development, benchmarking, and debugging overhead issues, we utilized AI assistants (specifically Gemini) to analyze console outputs and evaluate performance trade-offs.
-
-To maintain transparency, below are the exact prompts we used:
-
-GoCrazy Algorithm (Sunday / FJS Logic)
-
-“I found these resources online:
-https://github.com/johannburkard/StringSearch
-
-,
-https://github.com/CGJennings/fjs-string-matching
-
-.
-Can you update the GoCrazy algorithm using the logic of these algorithms?
-We will cite them as references. Please provide renewed, efficient Java code that looks unique and original.”
-
-Boyer–Moore Optimization
-
-“https://www.tutorialspoint.com/data_structures_algorithms/boyer_moore_algorithm.htm
-
-,
-https://www.geeksforgeeks.org/dsa/boyer-moore-algorithm-for-pattern-searching/
-,
-https://github.com/likejazz/boyer-moore-string-search
-
-.
-How can we make Boyer–Moore more efficient and suitable for the instructor’s requirements?
-Give me original code and only modify the Boyer–Moore part.”
-
-These prompts helped us combine theory with practice while preserving academic integrity.
+These prompts helped us combine theoretical knowledge from tutorials with practical implementation details, allowing us to write efficient code while maintaining academic integrity by referencing our sources.
